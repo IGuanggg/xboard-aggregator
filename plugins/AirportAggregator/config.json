@@ -1,0 +1,128 @@
+{
+    "name": "机场订阅聚合",
+    "code": "airport_aggregator",
+    "version": "0.2.0",
+    "description": "按 Xboard 权限组分发 SublinkPro 聚合订阅，并沿用 Xboard 的会员到期鉴权。",
+    "author": "Xboard Airport Aggregator",
+    "type": "feature",
+    "admin_menus": [
+        {
+            "id": "airports",
+            "title": "机场管理",
+            "path": "airports",
+            "icon": "package",
+            "label": "聚合",
+            "description": "在 Xboard 后台直接管理 SublinkPro 的上游机场订阅。"
+        }
+    ],
+    "admin_crud": {
+        "airports": {
+            "version": 1,
+            "title": "机场管理",
+            "description": "添加、编辑和删除 SublinkPro 上游机场；节点由 SublinkPro 按计划自动拉取。",
+            "id_field": "id",
+            "api": {
+                "list": "/plugin/airport-aggregator/airports/fetch",
+                "save": "/plugin/airport-aggregator/airports/save",
+                "delete": "/plugin/airport-aggregator/airports/delete"
+            },
+            "columns": [
+                {"key": "id", "title": "ID", "type": "number", "sortable": true, "width": 70},
+                {"key": "name", "title": "机场", "type": "string", "searchable": true},
+                {"key": "group", "title": "分组", "type": "string", "searchable": true},
+                {"key": "nodeCount", "title": "节点数", "type": "number", "sortable": true},
+                {
+                    "key": "enabled",
+                    "title": "状态",
+                    "type": "tag",
+                    "options": [
+                        {"value": "true", "label": "启用", "variant": "default"},
+                        {"value": "false", "label": "停用", "variant": "secondary"}
+                    ]
+                },
+                {"key": "cronExpr", "title": "更新计划", "type": "string"},
+                {"key": "lastRunTime", "title": "上次拉取", "type": "datetime", "sortable": true},
+                {"key": "nextRunTime", "title": "下次拉取", "type": "datetime", "sortable": true}
+            ],
+            "form": {
+                "name": {"type": "string", "label": "机场名称", "placeholder": "例如：高级线路", "required": true},
+                "url": {"type": "string", "label": "上游订阅链接", "placeholder": "https://example.com/subscribe/...", "required": true},
+                "group": {"type": "string", "label": "节点分组", "placeholder": "例如：premium"},
+                "cronExpr": {"type": "string", "label": "自动更新 Cron", "placeholder": "0 */6 * * *", "value": "0 */6 * * *", "required": true},
+                "enabled": {"type": "boolean", "label": "启用并定时拉取", "value": true},
+                "userAgent": {"type": "string", "label": "上游 User-Agent", "placeholder": "留空使用 SublinkPro 默认值"},
+                "fetchUsageInfo": {"type": "boolean", "label": "获取上游用量", "description": "仅作管理展示，不参与 Xboard 会员鉴权。", "value": false},
+                "pullNow": {"type": "boolean", "label": "保存后立即拉取", "description": "编辑机场时可手动提交一次节点拉取任务。", "value": false},
+                "skipTLSVerify": {"type": "boolean", "label": "跳过 TLS 证书校验", "description": "仅在上游证书异常时使用。", "value": false},
+                "remark": {"type": "text", "label": "备注", "placeholder": "供管理员查看的备注"}
+            },
+            "actions": {"create": true, "edit": true, "delete": true}
+        }
+    },
+    "require": {
+        "xboard": ">=1.0.0"
+    },
+    "config": {
+        "enabled": {
+            "type": "boolean",
+            "default": true,
+            "label": "启用聚合订阅",
+            "description": "关闭后所有用户继续使用 Xboard 原生节点订阅。"
+        },
+        "sublink_base_url": {
+            "type": "string",
+            "default": "http://sublinkpro:8000",
+            "label": "SublinkPro 内网地址",
+            "description": "建议仅使用 Docker 内网地址，不要填写公开管理地址。"
+        },
+        "sublink_api_key": {
+            "type": "string",
+            "default": "",
+            "label": "SublinkPro API Key",
+            "description": "用于 Xboard 后台管理机场；在 SublinkPro 中生成 Access Key 后填入，请勿使用管理员密码。"
+        },
+        "group_routes": {
+            "type": "json",
+            "default": {},
+            "label": "权限组与分享 Token 映射",
+            "description": "JSON 格式，例如 {\"1\":\"普通线路分享Token\",\"2\":\"高级线路分享Token\"}。未配置的权限组继续使用 Xboard 原生节点。"
+        },
+        "client_map": {
+            "type": "json",
+            "default": {
+                "clash": "mihomo",
+                "mihomo": "mihomo",
+                "surge": "surge",
+                "sing-box": "singbox",
+                "singbox": "singbox",
+                "default": "v2ray"
+            },
+            "label": "客户端格式映射",
+            "description": "将 User-Agent 或 flag 关键字映射为 SublinkPro 的 client 参数。"
+        },
+        "timeout_seconds": {
+            "type": "number",
+            "default": 15,
+            "label": "请求超时（秒）",
+            "description": "Xboard 等待 SublinkPro 返回订阅的最长时间。"
+        },
+        "cache_seconds": {
+            "type": "number",
+            "default": 30,
+            "label": "订阅缓存（秒）",
+            "description": "按分享 Token 和客户端格式缓存聚合结果，0 表示不缓存。"
+        },
+        "verify_tls": {
+            "type": "boolean",
+            "default": true,
+            "label": "校验 TLS 证书",
+            "description": "SublinkPro 使用 HTTPS 时建议保持开启。"
+        },
+        "fail_open": {
+            "type": "boolean",
+            "default": false,
+            "label": "故障时回退原生订阅",
+            "description": "开启后 SublinkPro 故障时返回 Xboard 原生节点；关闭则返回 502，避免错误地泄露其他线路。"
+        }
+    }
+}
